@@ -17,6 +17,7 @@ async function run() {
         await client.connect();
         const productCollection = client.db("manufacturer").collection("product");
         const userCollection = client.db("manufacturer").collection("user");
+        const orderCollection = client.db("manufacturer").collection("order");
 
         app.get('/products', async (req, res) => {
             const query = {};
@@ -44,6 +45,21 @@ async function run() {
             // const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
             res.send({ result, updatedUser });
         });
+
+        app.post('/order', async (req, res) => {
+            const newOrder = req.body;
+            console.log(newOrder);
+            const result = await orderCollection.insertOne(newOrder);
+            res.send(result);
+        });
+
+        app.get('/order', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const orders = await orderCollection.find(query).toArray();
+            res.send(orders);
+        });
+
     } finally {
         // await client.close();
     }
