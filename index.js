@@ -13,6 +13,15 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+const verifyJwt = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        res.status(401).send({ message: 'unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1];
+
+}
+
 async function run() {
     try {
         await client.connect();
@@ -54,22 +63,14 @@ async function run() {
             res.send(result);
         });
 
-        // app.put('/order/:email', async (req, res) => {
-        //     const email = req.params.email;
-        //     console.log(email);
-        //     const order = req.body;
-        //     const filter = { email: email };
-        //     const options = { upsert: true };
-        //     const updateDoc = {
-        //         $set: order,
-        //     }
-        //     const result = await orderCollection.updateOne(filter, updateDoc, options);
-        //     const updatedOrder = await orderCollection.findOne(filter);
+        app.delete('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await orderCollection.deleteOne(query);
+            res.send(result);
+        })
 
-        //     res.send({ result, updatedOrder });
-        // });
-
-        app.get('/order', async (req, res) => {
+        app.get('/order', verifyJwt, async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
             const orders = await orderCollection.find(query).toArray();
