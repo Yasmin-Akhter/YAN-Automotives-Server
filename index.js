@@ -3,6 +3,7 @@ const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const res = require('express/lib/response');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 5000;
 app.use(cors());
@@ -42,8 +43,8 @@ async function run() {
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
             const updatedUser = await userCollection.findOne(filter);
-            // const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-            res.send({ result, updatedUser });
+            const token = jwt.sign({ email: email }, process.env.TOKEN_SECRET, { expiresIn: '1h' })
+            res.send({ result, updatedUser, token });
         });
 
         app.post('/order', async (req, res) => {
@@ -52,6 +53,21 @@ async function run() {
             const result = await orderCollection.insertOne(newOrder);
             res.send(result);
         });
+
+        // app.put('/order/:email', async (req, res) => {
+        //     const email = req.params.email;
+        //     console.log(email);
+        //     const order = req.body;
+        //     const filter = { email: email };
+        //     const options = { upsert: true };
+        //     const updateDoc = {
+        //         $set: order,
+        //     }
+        //     const result = await orderCollection.updateOne(filter, updateDoc, options);
+        //     const updatedOrder = await orderCollection.findOne(filter);
+
+        //     res.send({ result, updatedOrder });
+        // });
 
         app.get('/order', async (req, res) => {
             const email = req.query.email;
