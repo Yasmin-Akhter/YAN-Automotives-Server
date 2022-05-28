@@ -13,20 +13,34 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-// const verifyJwt = (req, res, next) => {
+const verifyJwt = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.TOKEN_SECRET, function (err, decoded) {
+        if (err) {
+            res.status(403).send({ message: 'forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    });
+
+}
+// function verifyJWT(req, res, next) {
 //     const authHeader = req.headers.authorization;
 //     if (!authHeader) {
-//         res.status(401).send({ message: 'unauthorized access' })
+//         return res.status(401).send({ message: 'UnAuthorized access' });
 //     }
 //     const token = authHeader.split(' ')[1];
-//     jwt.verify(token, process.env.TOKEN_SECRET, function (err, decoded) {
+//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
 //         if (err) {
-//             res.status(403).send({ message: 'forbidden access' })
+//             return res.status(403).send({ message: 'Forbidden access' })
 //         }
 //         req.decoded = decoded;
 //         next();
 //     });
-
 // }
 
 async function run() {
@@ -40,6 +54,12 @@ async function run() {
         app.get('/products', async (req, res) => {
             const query = {};
             const cursor = productCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+        app.get('/order', async (req, res) => {
+            const query = {};
+            const cursor = orderCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
         });
@@ -64,10 +84,36 @@ async function run() {
             res.send({ result, updatedUser, token });
         });
 
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin })
+        })
+
+
+        app.put('/user/admin/:email', async (req, res) => {
+            const email = req.params.email;
+
+            console.log(email);
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' }
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
         app.post('/order', async (req, res) => {
             const newOrder = req.body;
             console.log(newOrder);
             const result = await orderCollection.insertOne(newOrder);
+            res.send(result);
+        });
+        app.post('/products', async (req, res) => {
+            const newProduct = req.body;
+            console.log(newProduct);
+            const result = await productCollection.insertOne(newProduct);
             res.send(result);
         });
 
@@ -99,8 +145,13 @@ async function run() {
 
         })
 
-        app.get('/reviews', async (req, res) => {
+        app.get('/user', async (req, res) => {
+            const query = {};
+            const users = await userCollection.find(query).toArray();
+            res.send(users);
+        });
 
+        app.get('/reviews', async (req, res) => {
             const query = {};
             const reviews = await orderCollection.find(query).toArray();
             res.send(reviews);
